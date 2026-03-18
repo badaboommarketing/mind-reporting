@@ -25,6 +25,7 @@ import { normalizeCurrencyFact } from "../domain/currency.js";
 import { METRIC_DEFINITIONS } from "../domain/metrics.js";
 import { createAppApi, createStore } from "./store.js";
 import { getPool } from "../db/pool.js";
+import { loadConfig } from "../config.js";
 import { CreateClientInput, LiveAppService, UploadCsvInput, AuthenticatedUser } from "../db/types.js";
 import { AppError } from "../lib/errors.js";
 import { prepareCsvImport } from "../importers/csv.js";
@@ -703,6 +704,19 @@ async function storeCsvBatchAndFacts(
 export function createDemoService(): LiveAppService {
   return {
     mode: "demo",
+    async healthcheck() {
+      return {
+        ok: true,
+        mode: "demo",
+        now: new Date().toISOString(),
+        checks: {
+          database: {
+            ok: true,
+            status: "skipped",
+          },
+        },
+      };
+    },
     async getCurrentUser() {
       const store = createStore();
       const user = store.users[0];
@@ -775,8 +789,42 @@ export function createDemoService(): LiveAppService {
 }
 
 export function createDatabaseService(): LiveAppService {
+  const config = loadConfig();
+
   return {
     mode: "database",
+    async healthcheck() {
+      const pool = getPool();
+      const startedAt = Date.now();
+      try {
+        await pool.query("select 1");
+        return {
+          ok: true,
+          mode: "database",
+          now: new Date().toISOString(),
+          checks: {
+            database: {
+              ok: true,
+              status: "ok",
+              latencyMs: Date.now() - startedAt,
+            },
+          },
+        };
+      } catch (error) {
+        return {
+          ok: false,
+          mode: "database",
+          now: new Date().toISOString(),
+          checks: {
+            database: {
+              ok: false,
+              status: "error",
+              error: error instanceof Error ? error.message : "Unknown database error.",
+            },
+          },
+        };
+      }
+    },
     async getCurrentUser(userId) {
       const pool = getPool();
       const client = await pool.connect();
@@ -806,6 +854,9 @@ export function createDatabaseService(): LiveAppService {
         await client.query("begin");
         const userCountResult = await client.query("select count(*)::int as count from app_users");
         const shouldPromoteFirstUser = userCountResult.rows[0]?.count === 0;
+        const normalizedEmail = input.email.trim().toLowerCase();
+        const shouldPromoteConfiguredAdmin = config.platformAdminEmails.includes(normalizedEmail);
+        const shouldBePlatformAdmin = shouldPromoteFirstUser || shouldPromoteConfiguredAdmin;
         const existing = await client.query(
           "select * from app_users where google_subject = $1 or lower(email) = lower($2)",
           [input.googleSubject, input.email],
@@ -816,14 +867,14 @@ export function createDatabaseService(): LiveAppService {
           await client.query(
             `insert into app_users (id, name, email, google_subject, is_platform_admin)
              values ($1, $2, $3, $4, $5)`,
-            [userId, input.name, input.email, input.googleSubject, shouldPromoteFirstUser],
+            [userId, input.name, input.email, input.googleSubject, shouldBePlatformAdmin],
           );
         } else {
           await client.query(
             `update app_users
-             set name = $2, email = $3, google_subject = $4
+             set name = $2, email = $3, google_subject = $4, is_platform_admin = is_platform_admin or $5
              where id = $1`,
-            [userId, input.name, input.email, input.googleSubject],
+            [userId, input.name, input.email, input.googleSubject, shouldBePlatformAdmin],
           );
         }
         await client.query("commit");

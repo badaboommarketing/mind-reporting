@@ -514,8 +514,24 @@ app.post("/app/exceptions/:exceptionId/resolve", requireUser, async (req, res, n
   }
 });
 
-app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, mode: service.mode, now: new Date().toISOString() });
+app.get("/api/health", async (_req, res) => {
+  try {
+    const health = await service.healthcheck();
+    res.status(health.ok ? 200 : 503).json(health);
+  } catch (error) {
+    res.status(503).json({
+      ok: false,
+      mode: service.mode,
+      now: new Date().toISOString(),
+      checks: {
+        database: {
+          ok: false,
+          status: "error",
+          error: error instanceof Error ? error.message : "Unknown healthcheck error.",
+        },
+      },
+    });
+  }
 });
 
 app.get("/api/clients", requireUser, async (req, res, next) => {

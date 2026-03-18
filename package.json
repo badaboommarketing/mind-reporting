@@ -10,7 +10,7 @@
     "db:apply-schema": "node --import tsx src/scripts/apply-schema.ts",
     "db:seed": "node --import tsx src/scripts/seed-bootstrap.ts",
     "start": "node dist/src/server.js",
-    "test": "node --import tsx --test test/time.test.ts test/identity.test.ts test/reporting.test.ts test/sync-policy.test.ts test/csv-import.test.ts"
+    "test": "node --import tsx --test test/time.test.ts test/identity.test.ts test/reporting.test.ts test/sync-policy.test.ts test/csv-import.test.ts test/config.test.ts"
   },
   "devDependencies": {
     "@types/connect-pg-simple": "^7.0.3",

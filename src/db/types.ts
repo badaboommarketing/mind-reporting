@@ -19,6 +19,20 @@ export interface AuthenticatedUser extends User {
   }>;
 }
 
+export interface ServiceHealthcheck {
+  ok: boolean;
+  mode: "demo" | "database";
+  now: string;
+  checks: {
+    database: {
+      ok: boolean;
+      status: "ok" | "skipped" | "error";
+      latencyMs?: number;
+      error?: string;
+    };
+  };
+}
+
 export interface CreateClientInput {
   name: string;
   reportingTimezone: string;
@@ -46,6 +60,7 @@ export interface UploadCsvInput {
 
 export interface LiveAppService {
   mode: "demo" | "database";
+  healthcheck(): Promise<ServiceHealthcheck>;
   getCurrentUser(userId: string): Promise<AuthenticatedUser | null>;
   getUserByEmail(email: string): Promise<AuthenticatedUser | null>;
   upsertGoogleUser(input: {

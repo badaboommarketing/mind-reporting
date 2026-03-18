@@ -62,11 +62,12 @@ npm run db:seed
    - `GOOGLE_CLIENT_ID=<google oauth client id>`
    - `GOOGLE_CLIENT_SECRET=<google oauth client secret>`
    - `GOOGLE_ALLOWED_DOMAIN=<your workspace domain>`
+   - Optional: `PLATFORM_ADMIN_EMAILS=you@yourdomain.com,ops@yourdomain.com`
    - Optional: `APP_BASE_URL=https://<your-railway-domain>` if you want to override Railway's inferred public URL.
 6. In Google Cloud OAuth settings, add `https://<your-railway-domain>/auth/google/callback` as an authorized redirect URI.
 7. Deploy the app. Railway will run the schema setup automatically before the app starts.
-8. Verify `https://<your-railway-domain>/api/health` returns `{ "ok": true, ... }`.
-9. Sign in with an allowed Google Workspace account. The first Google user becomes the platform admin automatically.
+8. Verify `https://<your-railway-domain>/api/health` returns `200` and shows a healthy database check.
+9. Sign in with an allowed Google Workspace account. Any email listed in `PLATFORM_ADMIN_EMAILS` becomes a platform admin automatically. If none are configured, the first Google user becomes the initial platform admin.
 10. Optional: run `npm run db:seed` later if you want the demo client/bootstrap data.
 
 ### Railway notes
@@ -75,7 +76,7 @@ npm run db:seed
 - Railway also runs the compiled schema script as a pre-deploy step, so you do not need a manual shell step just to initialize the database.
 - The server now binds to `0.0.0.0`, which Railway expects for public networking.
 - Production builds copy `public/` and `db/` into `dist/` so `npm start` can serve assets and use compiled scripts consistently.
-- If Railway provides `RAILWAY_PUBLIC_DOMAIN`, the app will automatically use it to derive the default OAuth callback base URL.
+- If Railway provides `RAILWAY_PUBLIC_DOMAIN`, the app will automatically use it to derive the default OAuth callback base URL and ignore stale `localhost` callback/base URLs left in env vars.
 
 ## Main app routes
 

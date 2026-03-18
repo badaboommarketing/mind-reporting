@@ -1,29 +1,76 @@
 create extension if not exists pgcrypto;
 
-create type app_user_role as enum ('agency_admin', 'client_editor', 'client_viewer');
-create type source_platform as enum ('meta_ads', 'gohighlevel', 'close', 'manual_import');
-create type credential_status as enum ('healthy', 'expired', 'invalid', 'needs_refresh');
-create type connector_health as enum ('healthy', 'stale', 'partial', 'manual', 'conflicted', 'broken');
-create type sync_mode as enum ('rolling_window', 'full_refresh', 'manual_only');
-create type metric_status as enum ('select_status', 'yellow', 'green', 'red', 'light_green', 'light_red');
-create type exception_type as enum (
-  'unmatched_identity',
-  'conflicting_source_totals',
-  'stale_connector',
-  'expired_credentials',
-  'missing_mapping',
-  'manual_import_conflict',
-  'post_lock_drift'
-);
-create type exception_status as enum (
-  'open',
-  'dismissed',
-  'resolved_by_override',
-  'resolved_by_mapping_change',
-  'reopened'
-);
+do $$
+begin
+  create type app_user_role as enum ('agency_admin', 'client_editor', 'client_viewer');
+exception
+  when duplicate_object then null;
+end $$;
 
-create table app_users (
+do $$
+begin
+  create type source_platform as enum ('meta_ads', 'gohighlevel', 'close', 'manual_import');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type credential_status as enum ('healthy', 'expired', 'invalid', 'needs_refresh');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type connector_health as enum ('healthy', 'stale', 'partial', 'manual', 'conflicted', 'broken');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type sync_mode as enum ('rolling_window', 'full_refresh', 'manual_only');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type metric_status as enum ('select_status', 'yellow', 'green', 'red', 'light_green', 'light_red');
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type exception_type as enum (
+    'unmatched_identity',
+    'conflicting_source_totals',
+    'stale_connector',
+    'expired_credentials',
+    'missing_mapping',
+    'manual_import_conflict',
+    'post_lock_drift'
+  );
+exception
+  when duplicate_object then null;
+end $$;
+
+do $$
+begin
+  create type exception_status as enum (
+    'open',
+    'dismissed',
+    'resolved_by_override',
+    'resolved_by_mapping_change',
+    'reopened'
+  );
+exception
+  when duplicate_object then null;
+end $$;
+
+create table if not exists app_users (
   id text primary key,
   name text not null,
   email text not null unique,
@@ -32,7 +79,7 @@ create table app_users (
   created_at timestamptz not null default now()
 );
 
-create table clients (
+create table if not exists clients (
   id text primary key,
   name text not null,
   reporting_timezone text not null,
@@ -49,14 +96,14 @@ create table clients (
   created_at timestamptz not null default now()
 );
 
-create table client_memberships (
+create table if not exists client_memberships (
   client_id text not null references clients(id) on delete cascade,
   user_id text not null references app_users(id) on delete cascade,
   role app_user_role not null,
   primary key (client_id, user_id)
 );
 
-create table metric_targets (
+create table if not exists metric_targets (
   client_id text not null references clients(id) on delete cascade,
   metric_key text not null,
   target numeric(18,4) not null,
@@ -64,7 +111,7 @@ create table metric_targets (
   primary key (client_id, metric_key)
 );
 
-create table metric_source_rules (
+create table if not exists metric_source_rules (
   client_id text not null references clients(id) on delete cascade,
   metric_key text not null,
   source_priority text[] not null,
@@ -72,7 +119,7 @@ create table metric_source_rules (
   primary key (client_id, metric_key)
 );
 
-create table data_sources (
+create table if not exists data_sources (
   id text primary key,
   client_id text not null references clients(id) on delete cascade,
   source source_platform not null,
@@ -95,7 +142,7 @@ create table data_sources (
   health connector_health not null
 );
 
-create table fx_rates (
+create table if not exists fx_rates (
   id text primary key,
   base_currency text not null,
   quote_currency text not null,
@@ -105,7 +152,7 @@ create table fx_rates (
   unique (base_currency, quote_currency, rate_date)
 );
 
-create table raw_snapshots (
+create table if not exists raw_snapshots (
   id text primary key,
   client_id text not null references clients(id) on delete cascade,
   source source_platform not null,
@@ -114,7 +161,7 @@ create table raw_snapshots (
   payload jsonb not null
 );
 
-create table normalized_facts (
+create table if not exists normalized_facts (
   id text primary key,
   client_id text not null references clients(id) on delete cascade,
   source source_platform not null,
@@ -161,7 +208,7 @@ create table normalized_facts (
   unique (client_id, source, source_record_key, fact_type)
 );
 
-create table identity_links (
+create table if not exists identity_links (
   id text primary key,
   client_id text not null references clients(id) on delete cascade,
   contact_key text not null,
@@ -172,7 +219,7 @@ create table identity_links (
   close_lead_key text
 );
 
-create table report_annotations (
+create table if not exists report_annotations (
   client_id text not null references clients(id) on delete cascade,
   report_month text not null,
   metric_key text not null,
@@ -187,7 +234,7 @@ create table report_annotations (
   primary key (client_id, report_month, metric_key)
 );
 
-create table report_versions (
+create table if not exists report_versions (
   id text primary key,
   client_id text not null references clients(id) on delete cascade,
   report_month text not null,
@@ -196,7 +243,7 @@ create table report_versions (
   version_number integer not null
 );
 
-create table report_version_metrics (
+create table if not exists report_version_metrics (
   report_version_id text not null references report_versions(id) on delete cascade,
   metric_key text not null,
   value numeric(18,4),
@@ -207,7 +254,7 @@ create table report_version_metrics (
   primary key (report_version_id, metric_key)
 );
 
-create table review_exceptions (
+create table if not exists review_exceptions (
   id text primary key,
   client_id text not null references clients(id) on delete cascade,
   report_month text,
@@ -221,7 +268,7 @@ create table review_exceptions (
   updated_at timestamptz not null default now()
 );
 
-create table manual_import_batches (
+create table if not exists manual_import_batches (
   id text primary key,
   client_id text not null references clients(id) on delete cascade,
   upload_type text not null,
@@ -233,11 +280,13 @@ create table manual_import_batches (
   created_at timestamptz not null default now()
 );
 
-create table sessions (
+create table if not exists sessions (
   sid varchar not null primary key,
   sess json not null,
   expire timestamptz not null
 );
+
+create index if not exists sessions_expire_idx on sessions (expire);
 
 create index sessions_expire_idx on sessions (expire);
 

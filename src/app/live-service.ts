@@ -804,6 +804,8 @@ export function createDatabaseService(): LiveAppService {
       const client = await pool.connect();
       try {
         await client.query("begin");
+        const userCountResult = await client.query("select count(*)::int as count from app_users");
+        const shouldPromoteFirstUser = userCountResult.rows[0]?.count === 0;
         const existing = await client.query(
           "select * from app_users where google_subject = $1 or lower(email) = lower($2)",
           [input.googleSubject, input.email],
@@ -813,8 +815,8 @@ export function createDatabaseService(): LiveAppService {
           userId = randomUUID();
           await client.query(
             `insert into app_users (id, name, email, google_subject, is_platform_admin)
-             values ($1, $2, $3, $4, false)`,
-            [userId, input.name, input.email, input.googleSubject],
+             values ($1, $2, $3, $4, $5)`,
+            [userId, input.name, input.email, input.googleSubject, shouldPromoteFirstUser],
           );
         } else {
           await client.query(

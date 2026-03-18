@@ -55,11 +55,27 @@ npm run db:seed
 1. Create a Railway project.
 2. Add a Postgres service.
 3. Add this repo as a Node service.
-4. Set the environment variables from `.env.example`.
-5. Run `npm run db:apply-schema`.
-6. Run `npm run db:seed`.
-7. Deploy the app.
-8. Sign in with the seeded admin email and start onboarding a real client.
+4. Generate a public domain for the app service.
+5. Set these variables on the app service:
+   - `DATABASE_URL=${{Postgres.DATABASE_URL}}`
+   - `SESSION_SECRET=<long random string>`
+   - `GOOGLE_CLIENT_ID=<google oauth client id>`
+   - `GOOGLE_CLIENT_SECRET=<google oauth client secret>`
+   - `GOOGLE_ALLOWED_DOMAIN=<your workspace domain>`
+   - Optional: `APP_BASE_URL=https://<your-railway-domain>` if you want to override Railway's inferred public URL.
+6. In Google Cloud OAuth settings, add `https://<your-railway-domain>/auth/google/callback` as an authorized redirect URI.
+7. Deploy the app. Railway will run the schema setup automatically before the app starts.
+8. Verify `https://<your-railway-domain>/api/health` returns `{ "ok": true, ... }`.
+9. Sign in with an allowed Google Workspace account. The first Google user becomes the platform admin automatically.
+10. Optional: run `npm run db:seed` later if you want the demo client/bootstrap data.
+
+### Railway notes
+
+- This repo now ships a [`railway.json`](./railway.json) that pins the build command, start command, and healthcheck path for Railway.
+- Railway also runs the compiled schema script as a pre-deploy step, so you do not need a manual shell step just to initialize the database.
+- The server now binds to `0.0.0.0`, which Railway expects for public networking.
+- Production builds copy `public/` and `db/` into `dist/` so `npm start` can serve assets and use compiled scripts consistently.
+- If Railway provides `RAILWAY_PUBLIC_DOMAIN`, the app will automatically use it to derive the default OAuth callback base URL.
 
 ## Main app routes
 

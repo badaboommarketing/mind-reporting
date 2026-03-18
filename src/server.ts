@@ -33,6 +33,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.resolve(__dirname, "../public");
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use("/assets", express.static(publicDir));
@@ -44,15 +45,16 @@ if (!config.demoMode) {
       store: new PgSession({
         pool: getPool(),
         tableName: "sessions",
-        createTableIfMissing: false,
+        createTableIfMissing: true,
       }),
+      proxy: true,
       secret: config.sessionSecret,
       resave: false,
       saveUninitialized: false,
       cookie: {
         httpOnly: true,
         sameSite: "lax",
-        secure: false,
+        secure: process.env.NODE_ENV === "production",
         maxAge: 1000 * 60 * 60 * 24 * 14,
       },
     }),

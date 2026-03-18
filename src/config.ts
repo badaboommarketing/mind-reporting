@@ -14,9 +14,11 @@ export interface AppConfig {
 }
 
 export function loadConfig(env = process.env): AppConfig {
-  const host = env.HOST ?? "127.0.0.1";
+  const host = env.HOST ?? "0.0.0.0";
   const port = Number(env.PORT ?? 3000);
-  const appBaseUrl = env.APP_BASE_URL ?? `http://${host}:${port}`;
+  const appBaseUrl =
+    env.APP_BASE_URL ??
+    (env.RAILWAY_PUBLIC_DOMAIN ? `https://${env.RAILWAY_PUBLIC_DOMAIN}` : `http://127.0.0.1:${port}`);
   const demoMode = env.DEMO_MODE === "true" || !env.DATABASE_URL;
 
   return {

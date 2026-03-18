@@ -278,16 +278,6 @@ create table if not exists manual_import_batches (
   created_at timestamptz not null default now()
 );
 
-create table if not exists sessions (
-  sid varchar not null primary key,
-  sess json not null,
-  expire timestamptz not null
-);
-
-create index if not exists sessions_expire_idx on sessions (expire);
-
-create index sessions_expire_idx on sessions (expire);
-
 alter table clients enable row level security;
 alter table client_memberships enable row level security;
 alter table metric_targets enable row level security;
@@ -302,36 +292,47 @@ alter table report_version_metrics enable row level security;
 alter table review_exceptions enable row level security;
 alter table manual_import_batches enable row level security;
 
+drop policy if exists client_isolation_on_clients on clients;
 create policy client_isolation_on_clients on clients
   using (id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_client_memberships on client_memberships;
 create policy client_isolation_on_client_memberships on client_memberships
   using (client_id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_metric_targets on metric_targets;
 create policy client_isolation_on_metric_targets on metric_targets
   using (client_id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_metric_source_rules on metric_source_rules;
 create policy client_isolation_on_metric_source_rules on metric_source_rules
   using (client_id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_data_sources on data_sources;
 create policy client_isolation_on_data_sources on data_sources
   using (client_id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_raw_snapshots on raw_snapshots;
 create policy client_isolation_on_raw_snapshots on raw_snapshots
   using (client_id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_normalized_facts on normalized_facts;
 create policy client_isolation_on_normalized_facts on normalized_facts
   using (client_id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_identity_links on identity_links;
 create policy client_isolation_on_identity_links on identity_links
   using (client_id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_report_annotations on report_annotations;
 create policy client_isolation_on_report_annotations on report_annotations
   using (client_id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_report_versions on report_versions;
 create policy client_isolation_on_report_versions on report_versions
   using (client_id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_report_version_metrics on report_version_metrics;
 create policy client_isolation_on_report_version_metrics on report_version_metrics
   using (
     exists (
@@ -342,8 +343,10 @@ create policy client_isolation_on_report_version_metrics on report_version_metri
     )
   );
 
+drop policy if exists client_isolation_on_review_exceptions on review_exceptions;
 create policy client_isolation_on_review_exceptions on review_exceptions
   using (client_id = current_setting('app.current_client_id', true));
 
+drop policy if exists client_isolation_on_manual_import_batches on manual_import_batches;
 create policy client_isolation_on_manual_import_batches on manual_import_batches
   using (client_id = current_setting('app.current_client_id', true));

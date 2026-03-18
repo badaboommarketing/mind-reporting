@@ -1,5 +1,3 @@
-create extension if not exists pgcrypto;
-
 do $$
 begin
   create type app_user_role as enum ('agency_admin', 'client_editor', 'client_viewer');
